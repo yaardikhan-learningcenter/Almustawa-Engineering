@@ -26,6 +26,19 @@
   color-scheme:dark;
 }
 *{box-sizing:border-box}
+
+/* login gate + user chip */
+body.locked .app{display:none}
+#authGate{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;background:var(--side)}
+.authbox{width:100%;max-width:360px;background:var(--surface);color:var(--ink);border-radius:14px;padding:26px 24px;box-shadow:0 10px 40px rgba(0,0,0,.4);display:flex;flex-direction:column;gap:12px}
+.authbox .alogo{width:140px;max-width:70%;height:auto;margin:0 auto 4px;display:block;filter:invert(1) hue-rotate(180deg)}
+:root[data-theme="dark"] .authbox .alogo{filter:brightness(1.9)}
+.authbox h2{margin:0;font-size:20px;text-align:center}.authbox .ahint{margin:0;color:var(--ink3);font-size:12.5px;text-align:center}
+.authbox label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px}
+.authbox label.chk{flex-direction:row;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:13px}
+.authbox .aerr{color:var(--bad);font-size:13px;min-height:18px}
+.uchip{font-size:12.5px;color:var(--ink2);white-space:nowrap}
+@media(max-width:700px){.uchip{display:none}}
 html,body{margin:0;height:100%}
 body{font:14px/1.45 "Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink)}
 button,input,select,textarea{font:inherit;color:inherit}
@@ -230,7 +243,7 @@ table.t{font-size:15.5px}.t th{padding:10px 12px}.t td{padding:8px 12px}.t td in
       <button class="iconbtn" id="menuBtn">☰</button>
       <h1 id="title">Dashboard</h1>
       <span class="sub" id="anchorTxt"></span>
-      <button class="iconbtn" id="themeBtn" title="Light / dark">🌓</button>
+      <span class="uchip" id="uchip"></span><button class="iconbtn" id="themeBtn" title="Light / dark">🌓</button><button class="iconbtn" id="logoutBtn" title="Sign out">⎋ Sign out</button>
     </header>
     <main class="view" id="view"></main>
   </div>
@@ -751,6 +764,7 @@ window.UI=(function(){
     const txt='﻿'+[head.map(q).join(',')].concat(rows.map(r=>r.map(q).join(','))).join('\r\n');
     const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:'text/csv'}));a.download=name+'.csv';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500);
   }
+  function xlsx(name,sheets){const b=window.XLSX_LITE.build(sheets);const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name+'.xlsx';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)}
   function download(name,text,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:type||'application/json'}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)}
 
   /* ---------- data table ---------- */
@@ -777,13 +791,14 @@ window.UI=(function(){
       const part=f.slice(pg*size,pg*size+size);
       const sums=cols.map(c=>c.sum?f.reduce((a,r)=>a+(+r[cols.indexOf(c)]||0),0):null);
       const crud=!!o.key;
-      host.innerHTML=`<div class="toolbar noprint"><input type="search" placeholder="Search…" id="tq" value="${esc(q)}" style="min-width:220px"><span class="pill">${f.length.toLocaleString()} rows</span><span class="sp"></span>${o.toolbar||''}${crud?`<button class="btn" id="tnew">+ New entry</button>`:''}<button class="btn sec" id="tcsv">⬇ CSV</button></div>
+      host.innerHTML=`<div class="toolbar noprint"><input type="search" placeholder="Search…" id="tq" value="${esc(q)}" style="min-width:220px"><span class="pill">${f.length.toLocaleString()} rows</span><span class="sp"></span>${o.toolbar||''}${crud?`<button class="btn" id="tnew">+ New entry</button>`:''}<button class="btn sec" id="tcsv">⬇ CSV</button><button class="btn sec" id="txls">⬇ Excel</button></div>
       <div class="tw ${o.auto?'auto':''}"><table class="t"><thead><tr>${cols.map((c,i)=>`<th data-i="${i}" class="${(c.t==='n'?'r':'')+(isRef(c)?' noref':'')}">${esc(c.n)}${sc===i?(sd>0?' ▲':' ▼'):''}</th>`).join('')}${crud?'<th class="noprint act"></th>':''}</tr></thead><tbody>${part.map((r,ri)=>`<tr data-ri="${ri}">${cols.map((c,i)=>cell(c,r[i],i)).join('')}${crud?`<td class="noprint act" style="white-space:nowrap">${(o.extra||[]).map((x,xi)=>`<button class="btn sec sm" title="${x.title}" data-x="${xi}:${ri}">${x.label}</button> `).join('')}<button class="btn sec sm" title="Edit" data-e="${ri}">✎</button> <button class="btn sec sm" title="Delete" data-d="${ri}">🗑</button></td>`:''}</tr>`).join('')||`<tr><td colspan="${cols.length+1}" class="empty">No records</td></tr>`}</tbody>${cols.some(c=>c.sum)?`<tfoot><tr>${cols.map((c,i)=>i===0?`<td>Total (${f.length.toLocaleString()})</td>`:c.sum?`<td class="r">${c.int?Math.round(sums[i]).toLocaleString():fmt(sums[i])}</td>`:'<td></td>').join('')}${crud?'<td></td>':''}</tr></tfoot>`:''}</table></div>
       <div class="pg noprint"><button class="btn sec sm" id="pp" ${pg?'':'disabled'}>‹ Prev</button><span>Page ${pg+1} / ${pages}</span><button class="btn sec sm" id="pn" ${pg<pages-1?'':'disabled'}>Next ›</button></div>`;
       const g=id=>host.querySelector('#'+id);
       const inp=g('tq');if(keepFocus){inp.focus();inp.setSelectionRange(q.length,q.length)}
       let tm;inp.oninput=e=>{q=e.target.value;pg=0;clearTimeout(tm);tm=setTimeout(()=>draw(true),180)};
       g('pp').onclick=()=>{pg--;draw()};g('pn').onclick=()=>{pg++;draw()};
+      g('txls').onclick=()=>xlsx(o.name||'export',[{name:o.name||'Data',head:cols.map(c=>c.n),types:cols.map(c=>c.t),rows:f.map(r=>cols.map((c,i)=>r[i]))}]);
       g('tcsv').onclick=()=>csv(o.name||'export',cols.map(c=>c.n),f.map(r=>cols.map((c,i)=>r[i])));
       host.querySelectorAll('th[data-i]').forEach(th=>th.onclick=()=>{const i=+th.dataset.i;if(sc===i)sd=-sd;else{sc=i;sd=cols[i].t==='n'?-1:1}draw()});
       if(crud){
@@ -828,7 +843,7 @@ window.UI=(function(){
   }
   window.addEventListener('beforeprint',()=>document.querySelectorAll('[data-tbl]').forEach(h=>{if(h._draw){h._all=true;h._draw()}}));
   window.addEventListener('afterprint',()=>document.querySelectorAll('[data-tbl]').forEach(h=>{if(h._draw){h._all=false;h._draw()}}));
-  return {filterHTML,bindFilter,branchSel,bindBranch,card,mount,table,sheetCols,csv,download,modal,form,esc,fmt,money};
+  return {filterHTML,bindFilter,branchSel,bindBranch,card,mount,table,sheetCols,csv,xlsx,download,modal,form,esc,fmt,money};
 })();
 
 </script>
@@ -1724,9 +1739,28 @@ window.V=(function(){
   };
 
   /* =============== SETTINGS =============== */
+  function usersCard(c){
+    const A=window.Auth;let me=A.user;
+    const draw=()=>{me=A.user;c.innerHTML=`<h3>Users & Login</h3><p class="hint">Signed in as <b>${esc(me.name)}</b> (${me.role}).</p>
+      <h3 style="margin-top:10px">Change my username / password</h3>
+      <div class="fbar" style="box-shadow:none"><label>Username<input id="su" value="${esc(me.name)}" autocomplete="username"></label><label>Current password<input id="so" type="password" autocomplete="current-password"></label><label>New password (leave empty to keep)<input id="sp" type="password" autocomplete="new-password"></label><button class="btn" id="ssave">Save changes</button><button class="btn sec" id="ulo">⎋ Sign out</button></div>`+
+      (A.isAdmin?`<div class="tw" style="margin-top:12px"><table class="t"><thead><tr><th>Username</th><th>Role</th><th>Created</th><th></th></tr></thead><tbody>${A.users().map(u=>`<tr><td>${esc(u.name)}</td><td>${u.role}</td><td>${esc(u.created||'')}</td><td style="white-space:nowrap"><button class="btn sec sm" data-n="${esc(u.u)}">Rename</button> <button class="btn sec sm" data-r="${esc(u.u)}">Reset password</button> <button class="btn sec sm" data-m="${esc(u.u)}">${u.role==='admin'?'Make user':'Make admin'}</button> <button class="btn sec sm" data-d="${esc(u.u)}">🗑</button></td></tr>`).join('')}</tbody></table></div>
+        <h3 style="margin-top:14px">Add user</h3><div class="toolbar"><input id="nu" placeholder="Username" autocomplete="off"><input id="np" type="password" placeholder="Password" autocomplete="new-password"><select id="nr"><option value="user">User</option><option value="admin">Admin</option></select><button class="btn" id="nadd">+ Add user</button></div>`:'')+
+      `<p class="hint">Logins are stored in this browser/device only (passwords are salted and hashed). They keep casual users out; they are not server-grade security.</p>`;
+      const run=async f=>{try{await f();draw()}catch(e){alert(e.message)}};
+      c.querySelector('#ulo').onclick=()=>A.logout();
+      c.querySelector('#ssave').onclick=()=>run(async()=>{await A.updateSelf(c.querySelector('#su').value,c.querySelector('#sp').value,c.querySelector('#so').value);document.getElementById('uchip').textContent='👤 '+A.user.name;alert('Saved. Use the new details next time you sign in.')});
+      if(A.isAdmin){
+        c.querySelector('#nadd').onclick=()=>run(async()=>{await A.add(c.querySelector('#nu').value,c.querySelector('#np').value,c.querySelector('#nr').value)});
+        c.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{const n=prompt('New password for '+b.dataset.r+' (min 4 characters):');if(n==null)return;run(async()=>{if(b.dataset.r===me.u){const o=prompt('Current password:');await A.setPassword(me.u,n,o)}else await A.setPassword(b.dataset.r,n)})});
+        c.querySelectorAll('[data-n]').forEach(b=>b.onclick=()=>{const n=prompt('New username for '+b.dataset.n+':',b.dataset.n);if(n==null)return;run(async()=>A.rename(b.dataset.n,n))});
+        c.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>run(async()=>{const u=A.users().find(x=>x.u===b.dataset.m);A.setRole(u.u,u.role==='admin'?'user':'admin')}));
+        c.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{if(confirm('Delete user '+b.dataset.d+'?'))run(async()=>A.remove(b.dataset.d))})}};
+    draw()}
   V.settings=function(el){
     const m=E.meta;
     el.innerHTML=head('Settings & Backup','Everything runs offline in your browser. Original data comes from data/data.js; your changes are stored in this browser.')+`
+    <div class="card" id="ucard" style="margin-bottom:14px"></div>
     <div class="grid g2"><div class="card"><h3>Appearance</h3><p><button class="btn sec" id="th">Toggle light / dark theme</button></p>
       <h3 style="margin-top:14px">Data source</h3><p>Built from <b>${esc(m.source||'')}</b> on ${esc(m.built||'')}.<br>Tables loaded: sales ${E.rows('sales').length.toLocaleString()}, purchases ${E.rows('purchases').length.toLocaleString()}, expenses ${E.rows('expenses').length.toLocaleString()}, receipts ${E.rows('receipts').length.toLocaleString()}, payments ${E.rows('payments').length.toLocaleString()}, quotations ${E.rows('quotations').length.toLocaleString()}, delivery notes ${E.rows('delivery').length.toLocaleString()}.</p>
       <p class="hint">Local changes: <b>${E.hasEdits()?'yes — you have added/edited/deleted records':'none'}</b></p></div>
@@ -1734,6 +1768,7 @@ window.V=(function(){
       <p><button class="btn" id="b1">⬇ Download my changes (backup)</button></p>
       <p><label class="btn sec" style="display:inline-block">⬆ Restore changes from backup<input type="file" id="b2" accept=".json" hidden></label></p>
       <p><button class="btn sec" id="b3">⬇ Export full merged data (JSON)</button></p>
+      <p><button class="btn" id="bx">📊 Download full database (Excel, all sheets)</button></p>
       <p><button class="btn danger" id="b4">Discard all local changes</button></p></div></div>
     <div class="card"><h3>Branches</h3><p>Branches: <b>${E.BRANCHES.map(esc).join(' · ')}</b>. Every quotation, delivery note, invoice, tax invoice, purchase, expense, receipt and payment is saved with a branch; employees have a location. Reports can be filtered by branch or shown combined (Reports → Branch Report).</p>
       <p>Records imported from the workbook have no branch. Treat them as belonging to: <select id="dbr"><option value="">Unassigned (keep separate)</option>${E.BRANCHES.map(b=>`<option ${b===E.defBranch?'selected':''}>${esc(b)}</option>`).join('')}</select></p>
@@ -1743,14 +1778,124 @@ window.V=(function(){
       <pre style="background:var(--surface2);padding:10px;border-radius:8px;overflow:auto">pip install openpyxl
 python3 tools/build_data.py "Al_Mustawa_Engineering.xlsx"</pre>
       <p>This regenerates <code>data/data.js</code> and <code>data/data.json</code>. Reload <code>index.html</code> and every dashboard, report and ledger recalculates itself.</p></div>`;
+    usersCard(el.querySelector('#ucard'));
     el.querySelector('#th').onclick=()=>window.App.toggleTheme();
     el.querySelector('#dbr').onchange=e=>{E.setDefBranch(e.target.value);render()};
     el.querySelector('#b1').onclick=()=>$.download('AlMustawa_changes_'+E.todayS+'.json',E.exportOverlay());
     el.querySelector('#b3').onclick=()=>$.download('AlMustawa_full_data_'+E.todayS+'.json',JSON.stringify(E.exportAll()));
+    el.querySelector('#bx').onclick=()=>{const sheets=Object.keys(E.T).map(k=>{const d=E.T[k];return{name:d.title,head:d.cols.map(c=>c.n),types:d.cols.map(c=>c.t),rows:E.rows(k).map(r=>d.cols.map((c,i)=>r[i]))}});
+      sheets.push({name:'Notes',head:['Note'],rows:E.notes().map(n=>[n])});$.xlsx('AlMustawa_database_'+E.todayS,sheets)};
     el.querySelector('#b2').onchange=e=>{const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{try{E.importOverlay(rd.result);alert('Backup restored');render()}catch(x){alert('Invalid backup file')}};rd.readAsText(f)};
     el.querySelector('#b4').onclick=()=>{if(confirm('Discard ALL local additions/edits/deletions and go back to the original workbook data?')){E.resetEdits();render()}};
   };
   return V;
+})();
+
+</script>
+<script>
+/* ===== Minimal offline .xlsx writer (no libraries) ===== */
+window.XLSX_LITE=(function(){
+  const te=new TextEncoder();
+  const CT=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
+  const crc=b=>{let c=0xFFFFFFFF;for(let i=0;i<b.length;i++)c=CT[(c^b[i])&255]^(c>>>8);return(c^0xFFFFFFFF)>>>0};
+  function zip(files){const parts=[],cd=[];let off=0;const u16=n=>[n&255,n>>8&255],u32=n=>[n&255,n>>8&255,n>>16&255,n>>>24&255];
+    for(const[name,data]of files){const nm=te.encode(name),c=crc(data),sz=data.length;
+      const lh=new Uint8Array([0x50,0x4b,3,4,20,0,0,8,0,0,0,0,0x21,0,...u32(c),...u32(sz),...u32(sz),...u16(nm.length),0,0]);parts.push(lh,nm,data);
+      cd.push(new Uint8Array([0x50,0x4b,1,2,20,0,20,0,0,8,0,0,0,0,0x21,0,...u32(c),...u32(sz),...u32(sz),...u16(nm.length),0,0,0,0,0,0,0,0,0,0,0,0,...u32(off)]),nm);off+=lh.length+nm.length+sz}
+    let cds=0;cd.forEach(x=>cds+=x.length);const n=files.length;
+    const end=new Uint8Array([0x50,0x4b,5,6,0,0,0,0,...u16(n),...u16(n),...u32(cds),...u32(off),0,0]);return new Blob([...parts,...cd,end],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})}
+  const esc=s=>String(s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const colL=i=>{let s='';i++;while(i>0){const m=(i-1)%26;s=String.fromCharCode(65+m)+s;i=(i-m-1)/26|0}return s};
+  const serial=s=>{const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(s);return m?Math.round((Date.UTC(+m[1],+m[2]-1,+m[3])-Date.UTC(1899,11,30))/864e5):null};
+  /* sheets: [{name, head:[...], rows:[[...]], types:['d'|'n'|'t'...]}] */
+  function build(sheets){
+    const used=new Set(),names=sheets.map(s=>{let b=String(s.name||'Sheet').replace(/[\\\/?*\[\]:]/g,' ').trim().slice(0,31)||'Sheet',n=b,i=2;while(used.has(n.toLowerCase())){const x=' '+i++;n=b.slice(0,31-x.length)+x}used.add(n.toLowerCase());return n});
+    const files=[],add=(n,t)=>files.push([n,te.encode(t)]);
+    add('[Content_Types].xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'+sheets.map((_,i)=>`<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')+'</Types>');
+    add('_rels/.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>');
+    add('xl/workbook.xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>'+names.map((n,i)=>`<sheet name="${esc(n)}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join('')+'</sheets></workbook>');
+    add('xl/_rels/workbook.xml.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+sheets.map((_,i)=>`<Relationship Id="rId${i+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i+1}.xml"/>`).join('')+`<Relationship Id="rId${sheets.length+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`);
+    add('xl/styles.xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="1"><numFmt numFmtId="164" formatCode="dd\\-mmm\\-yyyy"/></numFmts><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF14233A"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="4"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/><xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="4" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>');
+    sheets.forEach((s,si)=>{const nc=s.head.length,types=s.types||[];
+      const w=s.head.map((h,i)=>{let m=String(h).length;for(let r=0;r<Math.min(s.rows.length,200);r++){const v=s.rows[r][i];if(v!=null)m=Math.max(m,String(v).length)}return Math.min(Math.max(m+2,10),50)});
+      let x='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><cols>'+w.map((n,i)=>`<col min="${i+1}" max="${i+1}" width="${n}" customWidth="1"/>`).join('')+'</cols><sheetData>';
+      x+='<row r="1">'+s.head.map((h,i)=>`<c r="${colL(i)}1" s="1" t="inlineStr"><is><t>${esc(h)}</t></is></c>`).join('')+'</row>';
+      s.rows.forEach((r,ri)=>{const rn=ri+2;x+=`<row r="${rn}">`;for(let i=0;i<nc;i++){const v=r[i],ref=colL(i)+rn;if(v==null||v==='')continue;
+        if(types[i]==='d'){const d=serial(v);if(d!=null){x+=`<c r="${ref}" s="2"><v>${d}</v></c>`;continue}}
+        if(typeof v==='number'&&isFinite(v)){x+=`<c r="${ref}"${types[i]==='n'?' s="3"':''}><v>${v}</v></c>`}
+        else x+=`<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${esc(v)}</t></is></c>`}x+='</row>'});
+      x+='</sheetData>'+(s.rows.length?`<autoFilter ref="A1:${colL(nc-1)}${s.rows.length+1}"/>`:'')+'</worksheet>';add(`xl/worksheets/sheet${si+1}.xml`,x)});
+    return zip(files)}
+  return{build}
+})();
+
+</script>
+<script>
+/* ===== Login / users (client-side, offline) ===== */
+window.Auth=(function(){
+  const UK='almustawa_users_v1',SK='almustawa_session';
+  const enc=new TextEncoder();
+  const hex=b=>[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');
+  const rnd=()=>hex(crypto.getRandomValues(new Uint8Array(16)));
+  /* pure-JS SHA-256 fallback for non-secure contexts (no crypto.subtle) */
+  function sha256(m){const K=[];let p=2,n=0;const isP=x=>{for(let i=2;i*i<=x;i++)if(x%i===0)return 0;return 1};while(n<64){if(isP(p)){K[n++]=(Math.cbrt(p)%1*4294967296)|0}p++}
+    let H=[];p=2;n=0;while(n<8){if(isP(p)){H[n++]=(Math.sqrt(p)%1*4294967296)|0}p++}
+    const l=m.length,w=[];const ml=l*8;const buf=new Uint8Array(((l+9+63)>>6)<<6);buf.set(m);buf[l]=128;const dv=new DataView(buf.buffer);dv.setUint32(buf.length-4,ml>>>0);dv.setUint32(buf.length-8,Math.floor(ml/4294967296));
+    const R=(x,c)=>(x>>>c)|(x<<(32-c));
+    for(let o=0;o<buf.length;o+=64){for(let i=0;i<16;i++)w[i]=dv.getUint32(o+i*4);for(let i=16;i<64;i++){const s0=R(w[i-15],7)^R(w[i-15],18)^(w[i-15]>>>3),s1=R(w[i-2],17)^R(w[i-2],19)^(w[i-2]>>>10);w[i]=(w[i-16]+s0+w[i-7]+s1)|0}
+      let [a,b,c,d,e,f,g,h]=H;for(let i=0;i<64;i++){const S1=R(e,6)^R(e,11)^R(e,25),ch=(e&f)^(~e&g),t1=(h+S1+ch+K[i]+w[i])|0,S0=R(a,2)^R(a,13)^R(a,22),mj=(a&b)^(a&c)^(b&c),t2=(S0+mj)|0;h=g;g=f;f=e;e=(d+t1)|0;d=c;c=b;b=a;a=(t1+t2)|0}
+      H=[H[0]+a,H[1]+b,H[2]+c,H[3]+d,H[4]+e,H[5]+f,H[6]+g,H[7]+h].map(x=>x|0)}
+    const out=new Uint8Array(32),ov=new DataView(out.buffer);H.forEach((x,i)=>ov.setUint32(i*4,x));return out}
+  async function hash(pw,salt,alg){
+    if(alg==='pbkdf2'){const k=await crypto.subtle.importKey('raw',enc.encode(pw),'PBKDF2',false,['deriveBits']);return hex(await crypto.subtle.deriveBits({name:'PBKDF2',salt:enc.encode(salt),iterations:150000,hash:'SHA-256'},k,256))}
+    const sp=enc.encode(salt+pw);let h=sp;for(let i=0;i<3000;i++){const s=new Uint8Array(h.length+sp.length);s.set(h);s.set(sp,h.length);h=sha256(s)}return hex(h)}
+  const ALG=(window.crypto&&crypto.subtle)?'pbkdf2':'sha';
+  const load=()=>{try{return JSON.parse(localStorage.getItem(UK)||'[]')}catch(e){return[]}};
+  const save=a=>localStorage.setItem(UK,JSON.stringify(a));
+  const norm=u=>String(u||'').trim().toLowerCase();
+  async function mk(u,pw,role){const salt=rnd();return{u:norm(u),name:String(u).trim(),salt,alg:ALG,h:await hash(pw,salt,ALG),role:role||'user',created:new Date().toISOString().slice(0,10)}}
+  let cur=null;
+  const api={
+    users:()=>load().map(x=>({u:x.u,name:x.name,role:x.role,created:x.created})),
+    get user(){return cur},get isAdmin(){return !!cur&&cur.role==='admin'},
+    hasUsers:()=>load().length>0,
+    async setup(u,pw){if(load().length)throw new Error('Already set up');check(u,pw);save([await mk(u,pw,'admin')]);return api.login(u,pw,false)},
+    async login(u,pw,keep){const x=load().find(a=>a.u===norm(u));if(!x||await hash(pw,x.salt,x.alg)!==x.h)throw new Error('Wrong username or password');
+      cur={u:x.u,name:x.name,role:x.role};try{(keep?localStorage:sessionStorage).setItem(SK,x.u)}catch(e){}return cur},
+    logout(){cur=null;try{sessionStorage.removeItem(SK);localStorage.removeItem(SK)}catch(e){}location.reload()},
+    resume(){let s=null;try{s=sessionStorage.getItem(SK)||localStorage.getItem(SK)}catch(e){}const x=s&&load().find(a=>a.u===s);if(x){cur={u:x.u,name:x.name,role:x.role};return cur}return null},
+    async updateSelf(newU,newPw,oldPw){if(!cur)throw new Error('Not signed in');const a=load(),x=a.find(z=>z.u===cur.u);if(!x)throw new Error('Account not found');
+      if(await hash(oldPw||'',x.salt,x.alg)!==x.h)throw new Error('Current password is wrong');
+      const nu=norm(newU||cur.u);if(nu!==x.u){check(newU,newPw||'xxxx');if(a.some(z=>z.u===nu))throw new Error('Username already exists');x.u=nu;x.name=String(newU).trim()}
+      if(newPw){if(newPw.length<4)throw new Error('Password must be at least 4 characters');const salt=rnd();x.salt=salt;x.alg=ALG;x.h=await hash(newPw,salt,ALG)}
+      save(a);cur={u:x.u,name:x.name,role:x.role};try{[sessionStorage,localStorage].forEach(st=>{if(st.getItem(SK))st.setItem(SK,x.u)})}catch(e){}},
+    rename(u,newU){need();check(newU,'xxxx');const a=load(),x=a.find(z=>z.u===norm(u));if(!x)throw new Error('No such user');if(norm(newU)!==x.u&&a.some(z=>z.u===norm(newU)))throw new Error('Username already exists');x.u=norm(newU);x.name=String(newU).trim();save(a)},
+    async add(u,pw,role){need();check(u,pw);const a=load();if(a.some(x=>x.u===norm(u)))throw new Error('Username already exists');a.push(await mk(u,pw,role));save(a)},
+    async setPassword(u,pw,old){if(!cur)throw new Error('Not signed in');if(pw.length<4)throw new Error('Password must be at least 4 characters');const a=load(),x=a.find(z=>z.u===norm(u));if(!x)throw new Error('No such user');
+      if(cur.role!=='admin'||norm(u)===cur.u){if(norm(u)!==cur.u)throw new Error('Not allowed');if(await hash(old||'',x.salt,x.alg)!==x.h)throw new Error('Current password is wrong')}
+      const salt=rnd();x.salt=salt;x.alg=ALG;x.h=await hash(pw,salt,ALG);save(a)},
+    setRole(u,role){need();const a=load();const x=a.find(z=>z.u===norm(u));if(!x)return;if(x.role==='admin'&&role!=='admin'&&a.filter(z=>z.role==='admin').length<2)throw new Error('Keep at least one admin');x.role=role;save(a)},
+    remove(u){need();const a=load(),x=a.find(z=>z.u===norm(u));if(!x)return;if(x.u===cur.u)throw new Error('You cannot delete yourself');if(x.role==='admin'&&a.filter(z=>z.role==='admin').length<2)throw new Error('Keep at least one admin');save(a.filter(z=>z!==x))}
+  };
+  function need(){if(!cur||cur.role!=='admin')throw new Error('Admin only')}
+  function check(u,pw){if(!norm(u))throw new Error('Enter a username');if(!/^[a-z0-9._@-]{2,40}$/.test(norm(u)))throw new Error('Username: letters, numbers . _ - @ only');if(String(pw).length<4)throw new Error('Password must be at least 4 characters')}
+  /* ---- login screen ---- */
+  function gate(onOk){
+    const first=!api.hasUsers();
+    const d=document.createElement('div');d.id='authGate';
+    d.innerHTML=`<form class="authbox" autocomplete="on"><img class="alogo" alt="Al Mustawa"><h2>${first?'Create admin account':'Sign in'}</h2>
+      <p class="ahint">${first?'First time here. Choose the username and password for the administrator. You can add more users later in Settings.':'Al Mustawa ERP'}</p>
+      <label>Username<input name="username" id="au" autocomplete="username" autocapitalize="off" required></label>
+      <label>Password<input name="password" id="ap" type="password" autocomplete="${first?'new-password':'current-password'}" required></label>
+      ${first?'<label>Confirm password<input id="ap2" type="password" autocomplete="new-password" required></label>':'<label class="chk"><input type="checkbox" id="ak"> Keep me signed in on this device</label>'}
+      <div class="aerr" id="ae"></div><button class="btn" type="submit" style="width:100%">${first?'Create account':'Sign in'}</button></form>`;
+    document.body.appendChild(d);d.querySelector('.alogo').src=window.LOGO||'';
+    const f=d.querySelector('form'),er=d.querySelector('#ae');setTimeout(()=>d.querySelector('#au').focus(),50);
+    f.onsubmit=async ev=>{ev.preventDefault();er.textContent='';const u=f.au?f.au.value:d.querySelector('#au').value,p=d.querySelector('#ap').value;
+      try{if(first){if(p!==d.querySelector('#ap2').value)throw new Error('Passwords do not match');await api.setup(u,p)}else await api.login(u,p,d.querySelector('#ak').checked);d.remove();onOk()}catch(e){er.textContent=e.message}};
+  }
+  api.start=function(onOk){document.body.classList.add('locked');const go=()=>{document.body.classList.remove('locked');onOk()};if(api.resume())go();else gate(go)};
+  return api;
 })();
 
 </script>
@@ -1819,7 +1964,8 @@ window.App=(function(){
   document.getElementById('themeBtn').onclick=toggleTheme;
   const App={render,toggleTheme};
   document.getElementById('anchorTxt').textContent='Data to '+E.fdate(E.anchor());
-  render();
+  document.getElementById('logoutBtn').onclick=()=>window.Auth.logout();
+  window.Auth.start(()=>{document.getElementById('uchip').textContent='👤 '+window.Auth.user.name;render()});
   return App;
 })();
 
