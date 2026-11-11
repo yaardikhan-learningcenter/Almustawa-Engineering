@@ -1,0 +1,14 @@
+Firebase cloud backup - one-time setup
+1. console.firebase.google.com -> create/open a project.
+2. Build > Authentication > Get started > enable Email/Password > Users > Add user (backup login, separate from the app login).
+3. Build > Realtime Database > Create database. Copy the database URL.
+4. Realtime Database > Rules > paste and Publish:
+{
+  "rules": { "almustawa": { "$uid": { ".read": "$uid === auth.uid", ".write": "$uid === auth.uid" } } }
+}
+   (Never use test-mode rules: the backup contains payroll and customer data.)
+5. Project settings > General > Your apps > Web app > copy the apiKey.
+6. In the app: Settings & Backup > Cloud Backup (Firebase) > enter API key, database URL, the Firebase user's email and password > Connect.
+Then use "Back up now", "Restore from cloud", or tick the automatic option. The last 30 backups are kept.
+
+
